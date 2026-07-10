@@ -1,0 +1,37 @@
+# PDF Instructions
+Per 13 - MEMBUAT AUTO REPLY PESAN WHATSAPP (2).pdf
+
+# Executables and Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+wa/wa.exe
+fikom.exe
+
+# WhatsApp SQLite Sessions & Temporary DB files
+*.db
+*.db-shm
+*.db-wal
+wa/*.db
+wa/*.db-shm
+wa/*.db-wal
+
+# Environment Configurations (Sensitif)
+.env
+.env.*
+!.env.example
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS temp files
+Thumbs.db
+.DS_Store
