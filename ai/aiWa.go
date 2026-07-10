@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/openai/openai-go"
@@ -14,9 +15,15 @@ var userHistories = make(map[string][]openai.ChatCompletionMessageParamUnion)
 var mu sync.Mutex
 
 func InitAi() {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	model := os.Getenv("OPENAI_MODEL")
+	
+	if model == "" {
+		model = "gpt-3.5-turbo"
+	}
+	
 	client = openai.NewClient(
-		option.WithBaseURL("http://localhost:8081/v1/"),
-		option.WithAPIKey("saksake-karena-gak-butuh-api-key"),
+		option.WithAPIKey(apiKey),
 	)
 	fmt.Println("AI Engine berhasil diinisialisasi.")
 }
@@ -36,9 +43,14 @@ func TanyaAi(userID string, userInput string) string {
 	currentPayload = append(currentPayload, chatHistory...)
 	currentPayload = append(currentPayload, openai.UserMessage(userInput))
 	
+	model := os.Getenv("OPENAI_MODEL")
+	if model == "" {
+		model = "gpt-3.5-turbo"
+	}
+	
 	// Request Non-Streaming (Menunggu teks selesai dibuat baru dikirim ke WA)
 	resp, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:    openai.ChatModel("diisi-saksake"),
+		Model:    openai.ChatModel(model),
 		Messages: currentPayload,
 	})
 	if err != nil {
@@ -63,3 +75,4 @@ func TanyaAi(userID string, userInput string) string {
 	
 	return jawabanAi
 }
+
