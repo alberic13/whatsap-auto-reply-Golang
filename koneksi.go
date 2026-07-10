@@ -9,7 +9,7 @@ func koneksi() *gorm.DB {
 dbhost := os.Getenv("DB_HOST")
 dbport := os.Getenv("DB_PORT")
 dbuser := os.Getenv("DB_USER")
-dbpass := os.Getenv("DB_PASS")
+dbpass := os.Getenv("DB_PASSWORD")
 dbname := os.Getenv("DB_NAME")
 //user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local
 
@@ -21,3 +21,4 @@ panic(err)
 }
 return db
 }
+
