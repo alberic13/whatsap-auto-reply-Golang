@@ -14,6 +14,7 @@ import (
 	"sopingi.com/fikom/fungsi"
 	"sopingi.com/fikom/models"
 	"sopingi.com/fikom/wa"
+	"sopingi.com/fikom/ai"
 )
 
 func main() {
@@ -55,7 +56,7 @@ func main() {
 	}
 
 	// Jalankan WhatsApp Bot Auto-Reply secara asynchronous
-	go wa.KonekWa(db)
+	// go wa.KonekWa(db)
 
 	r := gin.Default()
 
@@ -156,6 +157,9 @@ func main() {
 
 	//membaca port dari file .env
 	port := os.Getenv("PORT")
-	r.Run(":" + port)
+	go r.Run(":" + port)
+	//ai.MulaiChatAi()
+	ai.InitAi()
+	wa.KonekWa(db)
 
 }

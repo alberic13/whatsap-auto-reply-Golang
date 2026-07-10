@@ -22,6 +22,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"gorm.io/gorm"
+	"sopingi.com/fikom/ai"
 	"sopingi.com/fikom/models"
 )
 
@@ -39,6 +40,10 @@ func connectWhatsApp(ctx context.Context, container *sqlstore.Container, clientL
 		deviceStore, err := container.GetFirstDevice(ctx)
 		if err != nil {
 			return err
+		}
+
+		if deviceStore != nil {
+			deviceStore.Platform = "macOS"
 		}
 
 		clientWa = whatsmeow.NewClient(deviceStore, clientLog)
@@ -192,11 +197,20 @@ func eventHandler(evt interface{}) {
 				clientWa.SendChatPresence(context.Background(), msg.Info.Sender, types.ChatPresencePaused, types.ChatPresenceMediaText)
 				
 				//untuk uji coba balasan hanya utk pesan berisi "tes"
-				pesanClean := strings.TrimSpace(strings.ToLower(pesan))
-				if pesanClean == "tes" {
+				pesanClean := strings.TrimSpace(pesan)
+				pesanLower := strings.ToLower(pesanClean)
+				if strings.HasPrefix(pesanLower, "[ai]") {
+					pertanyaan := strings.TrimSpace(pesanClean[4:])
+					if pertanyaan != "" {
+						jawabanAi := ai.TanyaAi(msg.Info.Sender.User, pertanyaan)
+						kirimPesanText(msg.Info.Sender, jawabanAi)
+					} else {
+						kirimPesanText(msg.Info.Sender, "Masukkan pertanyaan setelah prefiks [ai]. Contoh: *[ai]Selamat pagi*")
+					}
+				} else if pesanLower == "tes" {
 					kirimPesan(msg.Info.Sender)
 				} else {
-					kirimPesanDatabase(msg.Info.Sender, pesanClean)
+					kirimPesanDatabase(msg.Info.Sender, pesanLower)
 				}
 			}(v)
 		}
