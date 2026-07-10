@@ -1,4 +1,4 @@
-package main
+package wa
 
 import (
 	"bufio"
@@ -20,6 +20,9 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
 	_ "modernc.org/sqlite"
+
+	"gorm.io/gorm"
+	"sopingi.com/fikom/models"
 )
 
 // var untuk client whatssap
@@ -27,6 +30,9 @@ var clientWa *whatsmeow.Client
 
 // array id wa
 var recipientIDs []string
+
+// var untuk database
+var DB *gorm.DB
 
 func connectWhatsApp(ctx context.Context, container *sqlstore.Container, clientLog waLog.Logger) error {
 	for {
@@ -143,52 +149,56 @@ func eventHandler(evt interface{}) {
 		fmt.Println(" => apakah dari group = ", v.Info.IsGroup)
 		fmt.Println(" => apakah dari broadcast = ", v.Info.IsIncomingBroadcast())
 
-		//filter pesan agar hanya yang mengirim pesan japri dan isi pesan=”tes”
 		if !v.Info.IsFromMe &&
 			(v.Info.MessageSource.Chat.Server == "lid" || v.Info.MessageSource.Chat.Server == "s.whatsapp.net") &&
 			!v.Info.IsGroup &&
 			!v.Info.IsIncomingBroadcast() {
-			fmt.Println("PENGIRIM = ", v.Info.Sender.User)
-			
-			var pesan string
-			//jika text biasa
-			if v.Message.GetConversation() != "" {
-				pesan = v.Message.GetConversation()
-			//jika text ada format tertentu
-			} else if v.Message.ExtendedTextMessage != nil && v.Message.ExtendedTextMessage.GetText() != "" {
-				pesan = v.Message.ExtendedTextMessage.GetText()
-			}
-			fmt.Println("PESAN = " + pesan)
-			
-			//membuat array id_pesan
-			var id_pesan []types.MessageID
-			id_pesan = append(id_pesan, v.Info.ID)
-			
-			//status pesan dibaca
-			clientWa.MarkRead(context.Background(), id_pesan, time.Now(), v.Info.Chat, v.Info.Sender)
-			
-			//pengirim berlangkanan untuk menerima notif
-			clientWa.SubscribePresence(context.Background(), v.Info.Sender)
-			
-			//notif online
-			clientWa.SendPresence(context.Background(), types.PresenceAvailable)
-			
-			//jeda 2 detik, monggo boleh diubah
-			time.Sleep(2 * time.Second)
-			
-			//notif mengetik
-			clientWa.SendChatPresence(context.Background(), v.Info.Sender, types.ChatPresenceComposing, types.ChatPresenceMediaText)
-			
-			//jeda 3 detik, monggo boleh diubah
-			time.Sleep(3 * time.Second)
-			
-			//notif berhenti mengetik
-			clientWa.SendChatPresence(context.Background(), v.Info.Sender, types.ChatPresencePaused, types.ChatPresenceMediaText)
-			
-			//untuk uji coba balasan hanya utk pesan berisi "tes"
-			if strings.TrimSpace(strings.ToLower(pesan)) == "tes" {
-				kirimPesan(v.Info.Sender)
-			}
+			go func(msg *events.Message) {
+				fmt.Println("PENGIRIM = ", msg.Info.Sender.User)
+				
+				var pesan string
+				//jika text biasa
+				if msg.Message.GetConversation() != "" {
+					pesan = msg.Message.GetConversation()
+				//jika text ada format tertentu
+				} else if msg.Message.ExtendedTextMessage != nil && msg.Message.ExtendedTextMessage.GetText() != "" {
+					pesan = msg.Message.ExtendedTextMessage.GetText()
+				}
+				fmt.Println("PESAN = " + pesan)
+				
+				//membuat array id_pesan
+				var id_pesan []types.MessageID
+				id_pesan = append(id_pesan, msg.Info.ID)
+				
+				//status pesan dibaca
+				clientWa.MarkRead(context.Background(), id_pesan, time.Now(), msg.Info.Chat, msg.Info.Sender)
+				
+				//pengirim berlangkanan untuk menerima notif
+				clientWa.SubscribePresence(context.Background(), msg.Info.Sender)
+				
+				//notif online
+				clientWa.SendPresence(context.Background(), types.PresenceAvailable)
+				
+				//jeda 2 detik, monggo boleh diubah
+				time.Sleep(2 * time.Second)
+				
+				//notif mengetik
+				clientWa.SendChatPresence(context.Background(), msg.Info.Sender, types.ChatPresenceComposing, types.ChatPresenceMediaText)
+				
+				//jeda 3 detik, monggo boleh diubah
+				time.Sleep(3 * time.Second)
+				
+				//notif berhenti mengetik
+				clientWa.SendChatPresence(context.Background(), msg.Info.Sender, types.ChatPresencePaused, types.ChatPresenceMediaText)
+				
+				//untuk uji coba balasan hanya utk pesan berisi "tes"
+				pesanClean := strings.TrimSpace(strings.ToLower(pesan))
+				if pesanClean == "tes" {
+					kirimPesan(msg.Info.Sender)
+				} else {
+					kirimPesanDatabase(msg.Info.Sender, pesanClean)
+				}
+			}(v)
 		}
 
 	case *events.Receipt:
@@ -245,10 +255,8 @@ func findDBPath() string {
 	return "examplestore.db"
 }
 
-func main() {
-	// |------------------------------------------------------------------------------------------------------|
-	// | NOTE: This example uses the pure-Go modernc.org/sqlite driver. |
-	// |------------------------------------------------------------------------------------------------------|
+func KonekWa(db *gorm.DB) {
+	DB = db
 
 	dbLog := waLog.Stdout("Database", "DEBUG", true)
 	ctx := context.Background()
@@ -259,30 +267,12 @@ func main() {
 		panic(err)
 	}
 	defer container.Close()
-	recipientIDs, err = promptForList("Masukkan nomor tujuan, pisahkan dengan koma (contoh 62812xxxx@s.whatsapp.net,62813xxxx@s.whatsapp.net): ")
-	if err != nil {
-		panic(err)
-	}
-	messageText, err := promptForText("Masukkan pesan: ")
-	if err != nil {
-		panic(err)
-	}
+
 	clientLog := waLog.Stdout("Client", "DEBUG", true)
 	if err = connectWhatsApp(ctx, container, clientLog); err != nil {
 		panic(err)
 	}
-	fmt.Println("Login selesai, mengirim pesan...")
-
-	ctxSend, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	if err = sendTextMessageToRecipients(ctxSend, recipientIDs, messageText); err != nil {
-		fmt.Println("Gagal mengirim pesan:", err)
-		fmt.Println("Silakan jalankan ulang program ('go run wa.go') untuk memicu QR code baru jika sesi Anda sudah keluar.")
-		return
-	}
-
-	fmt.Println("Pesan berhasil dikirim ke semua ID di array")
+	fmt.Println("WhatsApp Bot terhubung dan mendengarkan pesan...")
 
 	client := clientWa
 	clientWa = client
@@ -298,9 +288,27 @@ func main() {
 func kirimPesan(IDPenerima types.JID) {
 	clientWa.SendMessage(
 		context.Background(),
-		IDPenerima,
+		IDPenerima.ToNonAD(),
 		&waE2E.Message{
-			Conversation: proto.String("[UJI COBA] \n PESAN OTOMATIS"),
+			Conversation: proto.String("ada yang bisa di bantu ?"),
 		},
 	)
+}
+
+func kirimPesanText(IDPenerima types.JID, messageText string) {
+	_, err := clientWa.SendMessage(context.Background(), IDPenerima.ToNonAD(), &waE2E.Message{
+		Conversation: proto.String(messageText),
+	})
+	if err != nil {
+		fmt.Println("Gagal mengirim balasan dari database:", err)
+	}
+}
+
+func kirimPesanDatabase(IDPenerima types.JID, kode string) {
+	var pesan models.Pesan
+	// mencari berdasarkan primary key (Kode)
+	result := DB.Where("kode = ?", kode).First(&pesan)
+	if result.Error == nil {
+		kirimPesanText(IDPenerima, pesan.Balasan)
+	}
 }

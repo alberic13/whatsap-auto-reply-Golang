@@ -13,7 +13,7 @@ import (
 	"sopingi.com/fikom/controllers"
 	"sopingi.com/fikom/fungsi"
 	"sopingi.com/fikom/models"
-
+	"sopingi.com/fikom/wa"
 )
 
 func main() {
@@ -30,6 +30,32 @@ func main() {
 	db.AutoMigrate(&models.User{})
 	db.AutoMigrate(&models.Pesanan{})
 	db.AutoMigrate(&models.Dokumen{})
+	db.AutoMigrate(&models.Pesan{})
+
+	// Seed data awal jika tabel pesans masih kosong
+	var count int64
+	db.Model(&models.Pesan{}).Count(&count)
+	if count == 0 {
+		db.Create(&models.Pesan{
+			Kode:      "info",
+			Balasan:   "[PESAN OTOMATIS] ini konten informasi",
+			CreatedAt: time.Now(),
+		})
+		db.Create(&models.Pesan{
+			Kode:      "prodi",
+			Balasan:   "[PESAN OTOMATIS] ini konten program studi",
+			CreatedAt: time.Now(),
+		})
+		db.Create(&models.Pesan{
+			Kode:      "sosmed",
+			Balasan:   "[PESAN OTOMATIS] ini konten sosial media",
+			CreatedAt: time.Now(),
+		})
+		log.Println("Tabel pesans berhasil di-seed dengan data awal (info, prodi, sosmed).")
+	}
+
+	// Jalankan WhatsApp Bot Auto-Reply secara asynchronous
+	go wa.KonekWa(db)
 
 	r := gin.Default()
 
@@ -112,6 +138,12 @@ func main() {
 	auth.POST("/drive", controllers.DriveUpload)
 	auth.GET("/drive", controllers.DriveTampil)
 	auth.GET("/drive/:id", controllers.DriveUnduh)
+
+	//route pesan
+	auth.GET("/pesan", controllers.PesanTampil)
+	auth.POST("/pesan", controllers.PesanTambah)
+	auth.PUT("/pesan", controllers.PesanUbah)
+	auth.DELETE("/pesan", controllers.PesanHapus)
 
 	//jika route tidak ada
 	r.NoRoute(func(c *gin.Context) {
