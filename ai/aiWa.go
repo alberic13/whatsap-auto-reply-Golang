@@ -42,7 +42,7 @@ func TanyaAi(userID string, userInput string) string {
 	model := geminiClient.GenerativeModel("gemini-3.5-flash")
 	
 	// System instruction
-	systemInstruction := "Anda adalah ZaldeBot, asisten virtual resmi Fakultas Ilmu Komputer UDB Surakarta. Jawab pertanyaan dengan singkat, ramah, dan informatif dalam Bahasa Indonesia."
+	systemInstruction := "Anda adalah ZaldeBot, asisten virtual zalde digital solution IT tech. Jawab pertanyaan dengan singkat, ramah, dan informatif dalam Bahasa Indonesia."
 	model.SystemInstruction = genai.NewUserContent(genai.Text(systemInstruction))
 	
 	// Ambil histori milik user ini dengan aman (Lock)
