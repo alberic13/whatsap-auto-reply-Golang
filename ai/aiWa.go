@@ -39,7 +39,7 @@ func TanyaAi(userID string, userInput string) string {
 	}
 	
 	ctx := context.Background()
-	model := geminiClient.GenerativeModel("gemini-1.5-flash")
+	model := geminiClient.GenerativeModel("gemini-3.5-flash")
 	
 	// System instruction
 	systemInstruction := "Anda adalah FikomBot, asisten virtual resmi Fakultas Ilmu Komputer UDB Surakarta. Jawab pertanyaan dengan singkat, ramah, dan informatif dalam Bahasa Indonesia."
