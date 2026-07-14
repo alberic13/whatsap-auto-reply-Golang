@@ -199,13 +199,13 @@ func eventHandler(evt interface{}) {
 				//untuk uji coba balasan hanya utk pesan berisi "tes"
 				pesanClean := strings.TrimSpace(pesan)
 				pesanLower := strings.ToLower(pesanClean)
-				if strings.HasPrefix(pesanLower, "[ai]") {
+				if strings.HasPrefix(pesanLower, "/ai") {
 					pertanyaan := strings.TrimSpace(pesanClean[4:])
 					if pertanyaan != "" {
 						jawabanAi := ai.TanyaAi(msg.Info.Sender.User, pertanyaan)
 						kirimPesanText(msg.Info.Sender, jawabanAi)
 					} else {
-						kirimPesanText(msg.Info.Sender, "Masukkan pertanyaan setelah prefiks [ai]. Contoh: *[ai]Selamat pagi*")
+						kirimPesanText(msg.Info.Sender, "Masukkan pertanyaan setelah prefiks /ai. Contoh: */ai Selamat pagi*")
 					}
 				} else if pesanLower == "tes" {
 					kirimPesan(msg.Info.Sender)

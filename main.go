@@ -14,6 +14,7 @@ import (
 	"sopingi.com/fikom/fungsi"
 	"sopingi.com/fikom/models"
 	"sopingi.com/fikom/wa"
+	"sopingi.com/fikom/wa/tg"
 	"sopingi.com/fikom/ai"
 )
 
@@ -160,6 +161,10 @@ func main() {
 	go r.Run(":" + port)
 	//ai.MulaiChatAi()
 	ai.InitAi()
+
+	// Jalankan Telegram Bot secara asynchronous
+	go tg.KonekTelegram(db)
+
 	wa.KonekWa(db)
 
 }
